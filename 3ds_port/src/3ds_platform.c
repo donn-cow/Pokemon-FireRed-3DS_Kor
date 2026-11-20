@@ -465,6 +465,8 @@ void CtrPlatform_Diagnostic(uint32_t frames, uint32_t aPresses, uint32_t checks)
     CtrLog_DrawOverlay(text);
 }
 
+void CtrAssets_StopWarmup(void) __attribute__((weak));
+
 void CtrPlatform_Shutdown(void)
 {
     if (!sInitialized)
@@ -477,6 +479,8 @@ void CtrPlatform_Shutdown(void)
     CtrAudio_Shutdown();
     CtrLog_Write(CTR_LOG_BOOT, "clean shutdown, platform frames=%llu", (unsigned long long)sFrames);
     aptUnhook(&sAptHook);
+    if (CtrAssets_StopWarmup)
+        CtrAssets_StopWarmup();
     CtrFs_Shutdown();
     CtrLog_Close();
     gfxExit();

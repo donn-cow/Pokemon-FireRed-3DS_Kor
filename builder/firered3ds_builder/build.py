@@ -105,7 +105,7 @@ def build_pack(rom_path: Path, payload: Payload, out_pak: Path, progress=None,
     report = Progress(progress)
     timings: list[tuple[str, float]] = []
     payload.check(need_executables=False)
-    report(0.0, "Checking the ROM")
+    report(0.0, "롬 확인 중")
     if rom is None:
         rom = load_rom(rom_path)
     payload = payload.for_rom(rom.sha1)
@@ -130,18 +130,18 @@ def build_pack(rom_path: Path, payload: Payload, out_pak: Path, progress=None,
             raise BuilderError("A game data file could not be rebuilt from the ROM.", str(exc),
                                code="data_rebuild_failed") from exc
         if i % 100 == 0:
-            report(0.05 + 0.45 * i / max(total, 1), "Extracting game data")
+            report(0.05 + 0.45 * i / max(total, 1), "게임 데이터 추출 중")
     timings.append(("extract", time.perf_counter() - start))
 
     if recipe.generated:
         work = Path(tempfile.mkdtemp(prefix="firered3ds-"))
         try:
-            report(0.5, "Preparing the 3D scenery inputs")
+            report(0.5, "3D 배경 준비 중")
             start = time.perf_counter()
-            build_tree(rom.data, recipe, work, report.span(0.5, 0.6, "Preparing the 3D scenery inputs"))
+            build_tree(rom.data, recipe, work, report.span(0.5, 0.6, "3D 배경 준비 중"))
             timings.append(("tree", time.perf_counter() - start))
             outputs = run_generators(work, payload.voxelgen, recipe.generated,
-                                     report.span(0.6, 0.9, "Generating the 3D scenery"), runner=runner,
+                                     report.span(0.6, 0.9, "3D 배경 생성 중"), runner=runner,
                                      timings=timings)
             files.update(outputs)
         finally:
@@ -153,12 +153,12 @@ def build_pack(rom_path: Path, payload: Payload, out_pak: Path, progress=None,
     if abi != recipe.engine_abi:
         raise BuilderError("The generated data does not match this release (ABI %08x, expected %08x)."
                            % (abi, recipe.engine_abi), code="abi_mismatch")
-    report(0.92, "Writing the data pack")
+    report(0.92, "데이터 팩 쓰는 중")
     info = pak.write_pak(out_pak, sorted(files.items()), abi, bytes.fromhex(rom.sha1))
-    report(0.96, "Verifying the data pack")
+    report(0.96, "데이터 팩 검증 중")
     with pak.PakReader(out_pak) as reader:
         reader.verify()
-    report(1.0, "Done")
+    report(1.0, "완료")
     return {"entries": info["entries"], "bytes": info["bytes"], "abi": abi, "release": recipe.release,
             "rom": rom.code, "timings": [(name, round(sec, 2)) for name, sec in timings],
             "payload": payload}

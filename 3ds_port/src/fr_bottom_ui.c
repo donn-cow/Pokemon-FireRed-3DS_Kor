@@ -28,6 +28,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "global.h"
 #include "main.h"
@@ -76,6 +77,7 @@
 #include "3ds_log.h"
 #include "3ds_platform.h"
 #include "fr_ui_icons.h"
+#include "korean_text.h"
 
 /* text.c, start_menu.c and region_map.c, under PORT_BRIDGE */
 void Port_DecompressGlyph(u8 fontId, u16 glyphId);
@@ -309,6 +311,19 @@ static u16 NextChar(const u8 **s)
 
     if (c == EOS || c == CHAR_NEWLINE)
         return EOS;
+#ifdef KOREAN_TEXT
+    {
+        /* 2-byte Hangul and particles; the particle agrees with the glyph
+           drawn before it (strings here are short labels and names). */
+        static u16 sPrevGlyph;
+        if (KO_IS_LEAD(c) && (*s)[1] != EOS)
+        {
+            u16 g = Ko_NextGlyph(s, &sPrevGlyph);
+            return g == 0xFFFF ? 0x100 : g;
+        }
+        sPrevGlyph = c;
+    }
+#endif
     (*s)++;
     /* the game's other symbols: the one that shows here is its "Lv" */
     if (c == CHAR_EXTRA_SYMBOL)
@@ -371,25 +386,81 @@ static void TextRight(u8 font, const u8 *str, int right, int y, u16 fg, u16 shad
     Text(font, str, right - TextWidth(font, str), y, fg, shadow, TRUE);
 }
 
-/* An ASCII label in the game's charset. A few of them can be in use at once. */
+static u8 AsciiChar(char c)
+{
+    return c >= 'A' && c <= 'Z' ? CHAR_A + (c - 'A')
+         : c >= 'a' && c <= 'z' ? CHAR_a + (c - 'a')
+         : c >= '0' && c <= '9' ? CHAR_0 + (c - '0')
+         : c == '/' ? CHAR_SLASH : c == '&' ? CHAR_AMPERSAND : c == '.' ? CHAR_PERIOD
+         : c == '-' ? CHAR_HYPHEN : c == '%' ? CHAR_PERCENT : c == ':' ? CHAR_COLON
+         : c == '!' ? CHAR_EXCL_MARK : c == '?' ? CHAR_QUESTION_MARK : CHAR_SPACE;
+}
+
+#ifdef KOREAN_TEXT
+#include "fr_korean_ui.h"
+
+/* The Korean label for an English one: the whole string, or its head before
+   a page counter such as "GAME 1/3". NULL when there is no translation. */
+static const char *KoreanLabel(const char *s, char *tmp, size_t tmpSize)
+{
+    size_t n = strlen(s), i;
+    const char *tail;
+
+    for (i = 0; i < ARRAY_COUNT(sKoUi); i++)
+        if (strcmp(s, sKoUi[i].en) == 0)
+            return sKoUi[i].ko;
+    /* "<label> 1/3" */
+    tail = strrchr(s, ' ');
+    if (tail && n >= 5 && tail[1] >= '0' && tail[1] <= '9' && tail[2] == '/')
+    {
+        size_t head = tail - s;
+        for (i = 0; i < ARRAY_COUNT(sKoUi); i++)
+            if (strlen(sKoUi[i].en) == head && strncmp(s, sKoUi[i].en, head) == 0)
+            {
+                snprintf(tmp, tmpSize, "%s%s", sKoUi[i].ko, tail);
+                return tmp;
+            }
+    }
+    return NULL;
+}
+#endif
+
+/* An ASCII label in the game's charset (in Korean builds, translated and
+   UTF-8 Hangul encoded). A few of them can be in use at once. */
 static const u8 *Ascii(const char *s)
 {
-    static u8 bufs[4][24];
+    static u8 bufs[8][72];
     static u8 next;
-    u8 *buf = bufs[next++ & 3];
-    int i;
+    u8 *buf = bufs[next++ & 7];
+    int i = 0;
+#ifdef KOREAN_TEXT
+    char tmp[72];
+    const char *ko = KoreanLabel(s, tmp, sizeof(tmp));
+    const u8 *p = (const u8 *)(ko != NULL ? ko : s);
 
-    for (i = 0; s[i] && i < 23; i++)
+    while (*p && i < 69)
     {
-        char c = s[i];
-
-        buf[i] = c >= 'A' && c <= 'Z' ? CHAR_A + (c - 'A')
-               : c >= 'a' && c <= 'z' ? CHAR_a + (c - 'a')
-               : c >= '0' && c <= '9' ? CHAR_0 + (c - '0')
-               : c == '/' ? CHAR_SLASH : c == '&' ? CHAR_AMPERSAND : c == '.' ? CHAR_PERIOD
-               : c == '-' ? CHAR_HYPHEN : c == '%' ? CHAR_PERCENT : c == ':' ? CHAR_COLON
-               : c == '!' ? CHAR_EXCL_MARK : c == '?' ? CHAR_QUESTION_MARK : CHAR_SPACE;
+        if (*p < 0x80)
+        {
+            buf[i++] = AsciiChar(*p++);
+        }
+        else if ((*p & 0xF0) == 0xE0 && p[1] && p[2])
+        {
+            u32 cp = ((u32)(p[0] & 0x0F) << 12) | ((u32)(p[1] & 0x3F) << 6) | (p[2] & 0x3F);
+            if (!Ko_EncodeHangul(cp, buf + i))
+                buf[i + 1] = buf[i] = CHAR_SPACE, i--; /* outside KS X 1001: a space */
+            i += 2;
+            p += 3;
+        }
+        else
+        {
+            p++;
+        }
     }
+#else
+    for (i = 0; s[i] && i < 23; i++)
+        buf[i] = AsciiChar(s[i]);
+#endif
     buf[i] = EOS;
     return buf;
 }
@@ -1677,18 +1748,36 @@ static void RenderBattle(const ViewState *s)
     FillRect(0, HEADER_H, W, FOOTER_Y - HEADER_H, C_PAGE);
     if (s->b.choose == PORT_BATTLE_SWITCH)
     {
+#ifdef KOREAN_TEXT
+        /* "<기술>와/과 바꿀까?": the particle follows the move name */
+        u8 title[48], *p = StringCopy(title, gMoveNames[s->b.moves[s->b.picked]]);
+
+        *p++ = KO_LEAD_JOSA;
+        *p++ = KO_JOSA_WA_GWA;
+        StringCopy(p, Ascii(" 바꿀까?"));
+#else
         u8 title[32], *p = StringCopy(title, Ascii("Swap "));
 
         p = StringCopy(p, gMoveNames[s->b.moves[s->b.picked]]);
         StringCopy(p, Ascii(" with?"));
+#endif
         Header(title);
     }
     else if (s->b.choose && s->b.player.present)
     {
+#ifdef KOREAN_TEXT
+        /* "<포켓몬>은/는 무엇을 할까?" */
+        u8 title[48], *p = StringCopy(title, s->b.player.name);
+
+        *p++ = KO_LEAD_JOSA;
+        *p++ = KO_JOSA_EUN_NEUN;
+        StringCopy(p, Ascii(" 무엇을 할까?"));
+#else
         u8 title[32], *p = StringCopy(title, Ascii("What will "));
 
         p = StringCopy(p, s->b.player.name);
         StringCopy(p, Ascii(" do?"));
+#endif
         Header(title);
     }
     else

@@ -799,6 +799,28 @@ bool VoxelWorld_ScreenFade(float *amount, float rgb[3])
             count = 3 * 16;
             fading = true;
         }
+        else if (!fading)
+        {
+            /*
+             * Black held without a fade: palette_bg_faded_fill_black() (the
+             * whiteout's "rushed to the POKéMON CENTER" screen) blacks the
+             * background palettes and prints on a window palette of its own.
+             * The map's palettes black and the unfaded ones not: the world
+             * is black too.
+             */
+            unsigned i, n = BG_PLTT_ID(13);
+            bool black = true, lit = false;
+
+            for (i = 0; i < n && black; ++i)
+                black = (shown[i] & 0x7FFF) == 0;
+            for (i = 0; i < n && !lit; ++i)
+                lit = (unfaded[i] & 0x7FFF) != 0;
+            if (black && lit)
+            {
+                *amount = 1.0f;
+                return true;
+            }
+        }
         if (!fading || memcmp(shown, unfaded, count * sizeof(u16)) == 0)
             return false;
         FadeFit(shown, unfaded, count, amount, rgb);

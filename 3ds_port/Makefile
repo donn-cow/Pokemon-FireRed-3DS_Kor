@@ -49,6 +49,15 @@ OBJECTS := $(patsubst src/%.c,build/%.o,$(SOURCES))
 GAMEFLAGS := -DPORTABLE -DPLATFORM_3DS -D__3DS__ -DMODERN=1 -DUBFIX -D__INTELLISENSE__
 GAMEFLAGS += -D$(GAME_VERSION) -DREVISION=$(GAME_REVISION) -D$(GAME_LANGUAGE)
 GAMEFLAGS += -iquote include -iquote ../include -iquote ../include/constants -iquote ..
+# KOREAN=1: the Korean text engine (2-byte Hangul, particles, the Korean fonts).
+KOREAN ?= 0
+ifeq ($(KOREAN),1)
+GAMEFLAGS += -DKOREAN_TEXT -DCTR_SD_KO
+# Its own SD folder (sdmc:/3ds/firered3ds-ko/: executable, save, data pack).
+CPPFLAGS += -DCTR_SD_KO
+APP_TITLE := Pokemon FireRed 3DS KO
+APP_DESCRIPTION := Korean (K260613) - native 3DS port
+endif
 # VOXEL=0 compiles the voxel overworld out entirely. Off until the FireRed
 # voxel world exists.
 # Per-machine switches that must be known this early (VOXEL=1), never committed.

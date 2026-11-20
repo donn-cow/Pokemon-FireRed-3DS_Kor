@@ -4,9 +4,9 @@
 # Files over 1 MiB that are allowed (globs): the release's own executables
 # and the room tables the generators write (numbers: metatile ids, heights).
 paths = [
-    "FireRed3DS-v*-Windows/FireRed3DS-Builder.exe",
-    "FireRed3DS-v*-Windows/firered3ds-builder-cli.exe",
-    "FireRed3DS-v*-Windows/payload/FireRed3DS.3dsx",
+    "FireRed3DS*-v*-Windows/FireRed3DS-Builder.exe",
+    "FireRed3DS*-v*-Windows/firered3ds-builder-cli.exe",
+    "FireRed3DS*-v*-Windows/payload/FireRed3DS.3dsx",
     "payload/FireRed3DS.3dsx",
     "3ds_port/src/voxel/voxel_room_table.h",
 ]
@@ -28,4 +28,4 @@ globs = []
 # The builder's PyInstaller runtime: Python, Tcl/Tk, Pillow and their DLLs,
 # shipped unmodified under their own licenses. Checked for ROMs, data packs
 # and secrets, not for size or incidental byte runs.
-globs = ["FireRed3DS-v*-Windows/_internal/*"]
+globs = ["FireRed3DS*-v*-Windows/_internal/*"]

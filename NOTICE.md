@@ -1,5 +1,15 @@
 # Attribution
 
+## Korean edition (this fork)
+
+The Korean edition (`patches/pokefirered/0031-korean-text-engine.patch`,
+`tools/korean/`, `3ds_port/src/fr_korean_ui.h`, `3ds_port/include/3ds_paths.h`
+and the `KOREAN=1` parts of the port) adds the Korean ROM (K260613) to
+Pokémon FireRed 3DS. The Korean translation, graphics and fonts belong to the
+makers of the Korean patch: none of them is in this repository or its
+releases. `tools/korean/*_addr.json` hold only where each string and graphic
+is in that ROM; the builder reads them from the player's own ROM.
+
 ## Pokémon Emerald 3Ds Dual Screen
 
 `3ds_port/scripts/voxel_building.py` is copied from

@@ -22,11 +22,12 @@
  * SDK-free: game translation units include this header.
  */
 
+#include "3ds_paths.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 
-#define CTR_DATA_DIR "sdmc:/3ds/firered3ds/"
+#define CTR_DATA_DIR CTR_SD_ROOT
 #define CTR_DATA_PAK_PATH CTR_DATA_DIR "firered3ds.pak"
 #define CTR_DATA_LOOSE_DIR CTR_DATA_DIR "devdata/"
 #define CTR_DATA_LOOSE_MARKER CTR_DATA_LOOSE_DIR ".firered3ds-dev"

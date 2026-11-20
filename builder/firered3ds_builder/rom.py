@@ -18,8 +18,12 @@ from pathlib import Path
 
 from .errors import BuilderError
 
-SUPPORTED_SHA1 = "dd5945db9b930750cb39d00c84da8571feebf417"
-# Fingerprints: libretro-database/metadat/no-intro/Nintendo - Game Boy Advance.dat
+# 한글판 툴킷: 포켓몬스터 파이어레드 한글판(K260613) 롬만 받는다.
+# 일본판 롬에 "20260613 포켓몬스터 파이어레드(J-K).xdelta"를 적용한 결과와 같다.
+SUPPORTED_SHA1 = "a79a61464f6b79d830af784969324945c5b73340"
+USA_SHA1 = "dd5945db9b930750cb39d00c84da8571feebf417"
+JAPAN_SHA1 = "04139887b6cd8f53269aca098295b006ddba6cfe"
+# The Korean ROM keeps the USA game code in its header (BPRE).
 ROM_PROFILES = {"BPRE": SUPPORTED_SHA1}
 ROM_SIZE = 16 * 1024 * 1024
 KNOWN_CODES = {
@@ -78,6 +82,17 @@ def check_rom_bytes(data: bytes, source: Path, supported: tuple[str, ...] | None
     sha1 = hashlib.sha1(data).hexdigest()
     if supported is None:
         supported = tuple(ROM_PROFILES.values())
+    if sha1 not in supported and sha1 == USA_SHA1:
+        raise BuilderError("미국판(USA Rev 1) 롬입니다. 이 툴킷은 한글판 전용입니다.",
+                           "미국판은 원래 FireRed3DS 툴킷을 사용하세요.", code="rom_wrong_game")
+    if sha1 not in supported and sha1 == JAPAN_SHA1:
+        raise BuilderError("일본판 롬입니다. 한글 패치를 먼저 적용하세요.",
+                           "일본판 롬에 \"20260613 포켓몬스터 파이어레드(J-K).xdelta\"를 적용한 롬을 "
+                           "선택하세요.", code="rom_wrong_game")
+    if sha1 not in supported:
+        raise BuilderError("지원하는 한글판 롬이 아닙니다.",
+                           "포켓몬스터 파이어레드 한글판(K260613), SHA-1 %s 롬이 필요합니다."
+                           % SUPPORTED_SHA1, code="rom_unsupported")
     if sha1 not in supported:
         codes = [c for c, s in ROM_PROFILES.items() if s in supported] or ["BPRE"]
         names = " or ".join(KNOWN_CODES[c] for c in codes)

@@ -1,0 +1,145 @@
+[
+ {
+  "path": "data/tilesets/primary/general/tiles.4bpp.lz",
+  "kor": "0xeba10c"
+ },
+ {
+  "path": "data/tilesets/secondary/generic_building_1/tiles.4bpp.lz",
+  "kor": "0xebc9d8"
+ },
+ {
+  "path": "graphics/battle_interface/healthbox_elements.4bpp",
+  "kor": "0xd11bc4",
+  "size": 3840
+ },
+ {
+  "path": "graphics/easy_chat/button_window.4bpp.lz",
+  "kor": "0xe99f30"
+ },
+ {
+  "path": "graphics/easy_chat/mode.4bpp.lz",
+  "kor": "0xe9a15c"
+ },
+ {
+  "path": "graphics/fame_checker/bg.4bpp",
+  "kor": "0xe9f2a0",
+  "size": 5280
+ },
+ {
+  "path": "graphics/interface/menu_info.4bpp",
+  "kor": "0xe95ddc",
+  "size": 8192
+ },
+ {
+  "path": "graphics/interface/status_icons.4bpp.lz",
+  "kor": "0xeb87a8"
+ },
+ {
+  "path": "graphics/misc/markings2.4bpp",
+  "kor": "0xe9cb9c",
+  "size": 800
+ },
+ {
+  "path": "graphics/naming_screen/back_button.4bpp",
+  "kor": "0xe98858",
+  "size": 480
+ },
+ {
+  "path": "graphics/naming_screen/ok_button.4bpp",
+  "kor": "0xe98a38",
+  "size": 480
+ },
+ {
+  "path": "graphics/naming_screen/page_swap_lower.4bpp",
+  "kor": "0xe98cb8",
+  "size": 160
+ },
+ {
+  "path": "graphics/naming_screen/page_swap_others.4bpp",
+  "kor": "0xe98d58",
+  "size": 160
+ },
+ {
+  "path": "graphics/naming_screen/page_swap_upper.4bpp",
+  "kor": "0xe98c18",
+  "size": 160
+ },
+ {
+  "path": "graphics/pokedex/cat_icon_abc.4bpp.lz",
+  "kor": "0xebcd90"
+ },
+ {
+  "path": "graphics/pokemon_storage/menu.4bpp.lz",
+  "kor": "0xebcff8"
+ },
+ {
+  "path": "graphics/summary_screen/bg.4bpp.lz",
+  "kor": "0xeb89a4"
+ },
+ {
+  "path": "graphics/summary_screen/page_egg.bin.lz",
+  "kor": "0xeb9fd8"
+ },
+ {
+  "path": "graphics/summary_screen/page_info.bin.lz",
+  "kor": "0xeb9994"
+ },
+ {
+  "path": "graphics/summary_screen/page_moves.bin.lz",
+  "kor": "0xeb9d3c"
+ },
+ {
+  "path": "graphics/summary_screen/page_moves_info.bin.lz",
+  "kor": "0xeb9ea8"
+ },
+ {
+  "path": "graphics/summary_screen/page_skills.bin.lz",
+  "kor": "0xeb9b4c"
+ },
+ {
+  "path": "graphics/summary_screen/status_ailment_icons.4bpp.lz",
+  "kor": "0xeb87a8"
+ },
+ {
+  "path": "graphics/teachy_tv/tiles.4bpp.lz",
+  "kor": "0xec948c"
+ },
+ {
+  "path": "graphics/title_screen/blank_sprite.4bpp.lz",
+  "kor": "0xec1c0c"
+ },
+ {
+  "path": "graphics/title_screen/copyright_press_start.4bpp.lz",
+  "kor": "0xec91b0"
+ },
+ {
+  "path": "graphics/title_screen/copyright_press_start.bin.lz",
+  "kor": "0xeae3b4"
+ },
+ {
+  "path": "graphics/title_screen/firered/box_art_mon.bin.lz",
+  "kor": "0xec1a58"
+ },
+ {
+  "path": "graphics/title_screen/firered/game_title_logo.8bpp.lz",
+  "kor": "0xeab904"
+ },
+ {
+  "path": "graphics/title_screen/firered/game_title_logo.bin.lz",
+  "kor": "0xec17e0"
+ },
+ {
+  "path": "graphics/title_screen/firered/game_title_logo.gbapal",
+  "kor": "0xeab704",
+  "size": 512
+ },
+ {
+  "path": "graphics/tm_case/hm.4bpp",
+  "kor": "0xe99118",
+  "size": 128
+ },
+ {
+  "path": "graphics/trainer_card/rse/tiles.4bpp.lz",
+  "kor": "0xe998cc"
+ }
+]

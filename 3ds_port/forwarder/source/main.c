@@ -12,10 +12,10 @@
 #include <string.h>
 #include <sys/stat.h>
 
-#define TARGET_SD_PATH "/3ds/firered3ds/FireRed3DS.3dsx"
+#define TARGET_SD_PATH "/3ds/firered3ds-ko/FireRed3DS.3dsx"
 #define TARGET_ARGV0   "sdmc:" TARGET_SD_PATH
 #define RESTORE_ARG    "firered3ds-forwarder:hbldr-tid="
-#define FORWARDER_TID  0x000400000F4ED300ULL
+#define FORWARDER_TID  0x000400000F4ED400ULL
 
 // Luma3DS shared config page (private layout, stable since v10).
 typedef struct {

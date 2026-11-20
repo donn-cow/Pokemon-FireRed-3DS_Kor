@@ -1,0 +1,577 @@
+Pokémon FireRed 3DS Korean edition changes to pret/pokefirered 037335f4c725d7c9aecdac87066f2002b4bd7e14: Korean text engine
+The Korean ROM's 2-byte Hangul, particles and fonts (all under KOREAN_TEXT), the Easy Chat consonant keyboard,
+printers keeping their own text colours, and preproc accepting CRLF. The Korean data itself comes from tools/korean/prepare.py.
+
+diff --git a/include/korean_text.h b/include/korean_text.h
+new file mode 100644
+index 0000000..2d3e3d7
+--- /dev/null
++++ b/include/korean_text.h
+@@ -0,0 +1,43 @@
++#ifndef GUARD_KOREAN_TEXT_H
++#define GUARD_KOREAN_TEXT_H
++
++// Korean text (the K260613 translation's encoding).
++//
++//  - 0x37..0x40 lead + 0x01..0xEF trail: KS X 1001 Hangul (2350 syllables)
++//  - 0x41 lead: symbols, and EE..F4 particles chosen from the previous syllable
++//  - 30 single-byte syllables share page 0 with the latin glyphs
++//
++// The fonts hold 14 pages of 256 glyphs; a 2-byte character's glyph code is
++// ((lead - 0x35) << 8) | trail, so pages 2..12 are the lead bytes 0x37..0x41.
++
++#ifdef KOREAN_TEXT
++
++#define KO_LEAD_FIRST 0x37
++#define KO_LEAD_LAST  0x41
++#define KO_LEAD_JOSA  0x41
++
++#define KO_IS_LEAD(c) ((u8)(c) >= KO_LEAD_FIRST && (u8)(c) <= KO_LEAD_LAST)
++#define KO_GLYPH(lead, trail) ((u16)((((lead) - 0x35) << 8) | (u8)(trail)))
++
++// 0x41 xx particles: the glyph depends on the character drawn before it.
++#define KO_JOSA_WA_GWA   0xEE // 와/과
++#define KO_JOSA_EUN_NEUN 0xEF // 은/는
++#define KO_JOSA_EUL_REUL 0xF0 // 을/를
++#define KO_JOSA_I_GA     0xF1 // 이/가
++#define KO_JOSA_I        0xF2 // 이 (copula: 이다/이면), nothing after a vowel
++#define KO_JOSA_EU       0xF4 // 으 of (으)로, nothing after a vowel or ㄹ
++
++bool8 Ko_IsJosa(u8 lead, u8 trail);
++// The glyph a particle draws after `prevGlyph` (0 when it draws nothing).
++u16 Ko_JosaGlyph(u8 trail, u16 prevGlyph);
++// Reads one character at *str (1 or 2 bytes) and advances *str. Returns the
++// glyph code, resolving particles against *prevGlyph, which it updates. A
++// particle that draws nothing returns 0xFFFF.
++u16 Ko_NextGlyph(const u8 **str, u16 *prevGlyph);
++// A Unicode Hangul syllable -> its 2 game bytes. Returns FALSE when the
++// syllable is outside KS X 1001 (the Korean ROM's 2350).
++bool8 Ko_EncodeHangul(u32 codepoint, u8 *out);
++
++#endif // KOREAN_TEXT
++
++#endif // GUARD_KOREAN_TEXT_H
+diff --git a/include/text.h b/include/text.h
+index 7090a02..5cad0f8 100644
+--- a/include/text.h
++++ b/include/text.h
+@@ -106,6 +106,9 @@ struct TextPrinter
+     u8 scrollDistance;
+     u8 minLetterSpacing;  // 0x20
+     u8 japanese;
++#ifdef KOREAN_TEXT
++    u16 koLastGlyph; // the glyph a following particle (0x41 xx) agrees with
++#endif
+ };
+ 
+ struct FontInfo
+diff --git a/src/easy_chat.c b/src/easy_chat.c
+index 4a08a1a..438dff0 100644
+--- a/src/easy_chat.c
++++ b/src/easy_chat.c
+@@ -17,7 +17,11 @@ struct Unk203A120
+     u16 numGroups;
+     u16 groups[EC_NUM_GROUPS];
+     u16 alphabeticalGroups[27];
++#ifdef KOREAN_TEXT
++    u16 alphabeticalWordsByGroup[27][360]; // the Korean ROM's ㅇ holds 352
++#else
+     u16 alphabeticalWordsByGroup[27][270];
++#endif
+     u8 filler3958[0x2C];
+     u16 allWords[270];
+     u16 totalWords;
+@@ -36,7 +40,11 @@ static bool32 EC_IsDeoxys(u16 species);
+ static bool8 IsWordUnlocked(u16 word);
+ 
+ #include "data/easy_chat/easy_chat_groups.h"
++#ifdef KOREAN_TEXT
++#include "data/easy_chat/easy_chat_words_by_letter_ko.h"
++#else
+ #include "data/easy_chat/easy_chat_words_by_letter.h"
++#endif
+ 
+ static const u8 *const sEasyChatGroupNamePointers[] = {
+     [EC_GROUP_POKEMON] = gEasyChatGroupName_Pokemon,
+diff --git a/src/easy_chat_2.c b/src/easy_chat_2.c
+index 07e388a..5680e7a 100644
+--- a/src/easy_chat_2.c
++++ b/src/easy_chat_2.c
+@@ -108,6 +108,12 @@ static bool8 IsPhraseDifferentThanPlayerInput(const u16 *wordsToCompare, u8 numW
+ static u8 GetEasyChatScreenTemplateId(u8 type);
+ static bool32 IsEcWordBufferUninitialized(void);
+ 
++#ifdef KOREAN_TEXT
++#define ALPHA_LAST_ROW 2 // three rows of initial consonants
++#else
++#define ALPHA_LAST_ROW 3
++#endif
++
+ void DoEasyChatScreen(u8 type, u16 *words, MainCallback callback)
+ {
+     u8 taskId;
+@@ -945,12 +951,12 @@ static int UpdateSelectGroupCursorPos_OutsideBlueBox_AlphaMode(u32 arg0)
+         if (sEasyChatScreen->selectGroupCursorY > 0)
+             sEasyChatScreen->selectGroupCursorY--;
+         else
+-            sEasyChatScreen->selectGroupCursorY = 3;
++            sEasyChatScreen->selectGroupCursorY = ALPHA_LAST_ROW;
+ 
+         MoveGroupCursorXToMaxCol();
+         return 14;
+     case 3:
+-        if (sEasyChatScreen->selectGroupCursorY < 3)
++        if (sEasyChatScreen->selectGroupCursorY < ALPHA_LAST_ROW)
+             sEasyChatScreen->selectGroupCursorY++;
+         else
+             sEasyChatScreen->selectGroupCursorY = 0;
+@@ -1123,12 +1129,21 @@ static u16 GetSelectedGroupIndex(void)
+     return 2 * (sEasyChatScreen->selectGroupCursorY + sEasyChatScreen->selectGroupRowsAbove) + sEasyChatScreen->selectGroupCursorX;
+ }
+ 
++#ifdef KOREAN_TEXT
++// The Korean ROM's: the initial consonants, three rows (ㄱ-ㄹ, ㅁ-ㅇ, ㅈ-ㅎ).
++static const u8 sAlphabetLayout[][7] = {
++    { 1,  2,  3,  4,  5,  6},
++    { 7,  8,  9, 10, 11, 12},
++    {13, 14, 15, 16, 17, 18, 19},
++};
++#else
+ static const u8 sAlphabetLayout[][7] = {
+     { 1,  2,  3,  4,  5,  6},
+     { 7,  8,  9, 10, 11, 12},
+     {13, 14, 15, 16, 17, 18, 19},
+     {20, 21, 22, 23, 24, 25, 26}
+ };
++#endif
+ 
+ static int GetSelectedLetter(void)
+ {
+diff --git a/src/easy_chat_3.c b/src/easy_chat_3.c
+index cf1e1d7..ad4a973 100644
+--- a/src/easy_chat_3.c
++++ b/src/easy_chat_3.c
+@@ -281,12 +281,28 @@ static const struct WindowTemplate sEasyChatYesNoWindowTemplate = {
+ static const u8 sText_Underscore[] = _("{UNDERSCORE}");
+ static const u8 sText_Clear17[] = _("{CLEAR 17}");
+ 
++#ifdef KOREAN_TEXT
++// The initial consonants as their first syllables, at the cursor's columns
++// (sAlphabetKeyboardColumnOffsets + 11).
++static const u8 sText_KoKeyboard_Row1[] = _("{CLEAR_TO 11}가{CLEAR_TO 23}까{CLEAR_TO 35}나{CLEAR_TO 67}다{CLEAR_TO 79}따{CLEAR_TO 91}라{CLEAR_TO 103}기타");
++static const u8 sText_KoKeyboard_Row2[] = _("{CLEAR_TO 11}마{CLEAR_TO 23}바{CLEAR_TO 35}빠{CLEAR_TO 67}사{CLEAR_TO 79}싸{CLEAR_TO 91}아");
++static const u8 sText_KoKeyboard_Row3[] = _("{CLEAR_TO 11}자{CLEAR_TO 23}짜{CLEAR_TO 35}차{CLEAR_TO 67}카{CLEAR_TO 79}타{CLEAR_TO 91}파{CLEAR_TO 103}하");
++static const u8 sText_KoKeyboard_Row4[] = _("");
++
++static const u8 *const sEasyChatKeyboardAlphabet[NUM_ALPHABET_ROWS] = {
++    sText_KoKeyboard_Row1,
++    sText_KoKeyboard_Row2,
++    sText_KoKeyboard_Row3,
++    sText_KoKeyboard_Row4
++};
++#else
+ static const u8 *const sEasyChatKeyboardAlphabet[NUM_ALPHABET_ROWS] = {
+     gText_EasyChatKeyboard_ABCDEFothers,
+     gText_EasyChatKeyboard_GHIJKL,
+     gText_EasyChatKeyboard_MNOPQRS,
+     gText_EasyChatKeyboard_TUVWXYZ
+ };
++#endif
+ 
+ static const struct SpriteSheet sEasyChatSpriteSheets[] = {
+     {.data = sTriangleCursor_Gfx,     .size = 0x0020, .tag = GFXTAG_TRIANGLE_CURSOR},
+diff --git a/src/help_system_util.c b/src/help_system_util.c
+index 5cb15b2..3e44916 100644
+--- a/src/help_system_util.c
++++ b/src/help_system_util.c
+@@ -1,4 +1,5 @@
+ #include "global.h"
++#include "korean_text.h"
+ #include "gflib.h"
+ #include "decompress.h"
+ #include "m4a.h"
+@@ -395,9 +396,24 @@ void HelpSystemRenderText(u8 fontId, u8 * dest, const u8 * src, u8 x, u8 y, u8 w
+     u8 i = 0;
+     s32 clearPixels = 0;
+ 
++#ifdef KOREAN_TEXT
++    u16 koPrev = 0;
++#endif
+     while (1)
+     {
+         u16 curChar = *src;
++#ifdef KOREAN_TEXT
++        if (KO_IS_LEAD(curChar) && src[1] != EOS)
++        {
++            curChar = Ko_NextGlyph(&src, &koPrev);
++            if (curChar == 0xFFFF)
++                continue;
++            DecompressAndRenderGlyph(fontId, curChar, &srcBlit, &destBlit, dest, x, y, width, height);
++            x += gGlyphInfo.width;
++            continue;
++        }
++        koPrev = curChar;
++#endif
+         src++;
+         switch (curChar)
+         {
+@@ -506,7 +522,14 @@ void HelpSystemRenderText(u8 fontId, u8 * dest, const u8 * src, u8 x, u8 y, u8 w
+                     destBlit.pixels = dest;
+                     destBlit.width = width * 8;
+                     destBlit.height = height * 8;
++#ifdef PORT_BRIDGE
++                    /* Clear to the text's background colour: colour 0 is
++                       transparent, and the port has nothing under this window
++                       (the erased cursor showed as a black box). */
++                    FillBitmapRect4Bit(&destBlit, x, y, clearPixels, GetFontAttribute(fontId, FONTATTR_MAX_LETTER_HEIGHT), GetLastTextColor(2));
++#else
+                     FillBitmapRect4Bit(&destBlit, x, y, clearPixels, GetFontAttribute(fontId, FONTATTR_MAX_LETTER_HEIGHT), 0);
++#endif
+                     x += clearPixels;
+                 }
+                 src++;
+diff --git a/src/korean_text.c b/src/korean_text.c
+new file mode 100644
+index 0000000..a84637e
+--- /dev/null
++++ b/src/korean_text.c
+@@ -0,0 +1,120 @@
++#include "global.h"
++#include "characters.h"
++#include "korean_text.h"
++
++#ifdef KOREAN_TEXT
++
++#include "korean_text_tables.h"
++
++// 0: open syllable, 1: final consonant, 2: final ㄹ (decides (으)로)
++static u8 FinalClass(u16 glyph)
++{
++    u8 page = glyph >> 8;
++    u8 low = glyph & 0xFF;
++
++    if (page >= 2 && page <= 11)
++    {
++        u16 idx = (page - 2) * 239 + low - 1;
++        if (low == 0 || low > 0xEF || idx >= 2350)
++            return 0;
++        return (sKoFinalClass[idx >> 2] >> ((idx & 3) * 2)) & 3;
++    }
++    if (page != 0)
++        return 0;
++
++    // The 30 single-byte syllables are all open (로 스 코 키 아 트 레 이 ...).
++    switch (low)
++    {
++    // Digits, read as Sino-Korean numbers: 영 일 이 삼 사 오 육 칠 팔 구
++    case CHAR_0: return 1;
++    case CHAR_1: return 2;
++    case CHAR_3: return 1;
++    case CHAR_6: return 1;
++    case CHAR_7: return 2;
++    case CHAR_8: return 2;
++    // Latin letters spelled out: 엘 엠 엔 알 end in a consonant
++    case CHAR_L: case CHAR_l: return 2;
++    case CHAR_R: case CHAR_r: return 2;
++    case CHAR_M: case CHAR_m: return 1;
++    case CHAR_N: case CHAR_n: return 1;
++    }
++    return 0;
++}
++
++bool8 Ko_IsJosa(u8 lead, u8 trail)
++{
++    return lead == KO_LEAD_JOSA && trail >= KO_JOSA_WA_GWA && trail <= KO_JOSA_EU && trail != 0xF3;
++}
++
++u16 Ko_JosaGlyph(u8 trail, u16 prevGlyph)
++{
++    u8 fc = FinalClass(prevGlyph);
++
++    switch (trail)
++    {
++    case KO_JOSA_WA_GWA:
++        return fc ? KO_GLYPH_GWA : KO_GLYPH_WA;
++    case KO_JOSA_EUN_NEUN:
++        return fc ? KO_GLYPH_EUN : KO_GLYPH_NEUN;
++    case KO_JOSA_EUL_REUL:
++        return fc ? KO_GLYPH_EUL : KO_GLYPH_REUL;
++    case KO_JOSA_I_GA:
++        return fc ? KO_GLYPH_I : KO_GLYPH_GA;
++    case KO_JOSA_I:
++        return fc ? KO_GLYPH_I : 0;
++    case KO_JOSA_EU:
++        return fc == 1 ? KO_GLYPH_EU : 0;
++    }
++    return KO_GLYPH(KO_LEAD_JOSA, trail);
++}
++
++u16 Ko_NextGlyph(const u8 **str, u16 *prevGlyph)
++{
++    const u8 *s = *str;
++    u16 glyph;
++
++    if (KO_IS_LEAD(s[0]) && s[1] != EOS)
++    {
++        if (Ko_IsJosa(s[0], s[1]))
++        {
++            glyph = Ko_JosaGlyph(s[1], *prevGlyph);
++            *str = s + 2;
++            if (glyph == 0)
++                return 0xFFFF;
++            *prevGlyph = glyph;
++            return glyph;
++        }
++        glyph = KO_GLYPH(s[0], s[1]);
++        *str = s + 2;
++    }
++    else
++    {
++        glyph = s[0];
++        *str = s + 1;
++    }
++    *prevGlyph = glyph;
++    return glyph;
++}
++
++bool8 Ko_EncodeHangul(u32 codepoint, u8 *out)
++{
++    s32 lo = 0, hi = ARRAY_COUNT(sKoUnicode) - 1;
++
++    while (lo <= hi)
++    {
++        s32 mid = (lo + hi) / 2;
++        if (sKoUnicode[mid] == codepoint)
++        {
++            out[0] = KO_LEAD_FIRST + mid / 239;
++            out[1] = mid % 239 + 1;
++            return TRUE;
++        }
++        if (sKoUnicode[mid] < codepoint)
++            lo = mid + 1;
++        else
++            hi = mid - 1;
++    }
++    return FALSE;
++}
++
++#endif // KOREAN_TEXT
+diff --git a/src/new_menu_helpers.c b/src/new_menu_helpers.c
+index d89e23c..acdb9d6 100644
+--- a/src/new_menu_helpers.c
++++ b/src/new_menu_helpers.c
+@@ -90,7 +90,11 @@ static const struct FontInfo gFontInfos[] =
+         .maxLetterWidth = 10,
+         .maxLetterHeight = 14,
+         .letterSpacing = 1,
++#ifdef KOREAN_TEXT
++        .lineSpacing = 0xFF, // the Korean ROM's: lines 1 px closer (u8 wraps)
++#else
+         .lineSpacing = 0,
++#endif
+         .fgColor = 2,
+         .bgColor = 1,
+         .shadowColor = 3,
+diff --git a/src/text.c b/src/text.c
+index e585a5e..86bd3aa 100644
+--- a/src/text.c
++++ b/src/text.c
+@@ -5,6 +5,7 @@
+ #include "graphics.h"
+ #include "dynamic_placeholder_text_util.h"
+ #include "constants/songs.h"
++#include "korean_text.h"
+ 
+ // The 3DS port keeps every INCBIN out of the executable as a 4-byte stub its
+ // asset index resolves: a glyph is base + offset, and an offset past the stub
+@@ -399,6 +400,37 @@ static const u8 sFontFemaleJapaneseGlyphWidths[] =
+ 
+ static const u16 sFontBoldJapaneseGlyphs[] = INCBIN_U16("graphics/fonts/japanese_bold.fwjpnfont");
+ 
++#ifdef KOREAN_TEXT
++// The Korean fonts replace the latin ones: 14 pages of 256 glyphs (64 bytes
++// each, the latin format; the small font too) and a width per glyph. Page 0 is
++// the single-byte set, page 1 CHAR_EXTRA_SYMBOL, pages 2.. the lead bytes 0x37...
++static const u16 sKoFontSmallGlyphs[] = INCBIN_U16("graphics/fonts/korean/small.kofont");
++static const u8 sKoFontSmallWidths[] = INCBIN_U8("graphics/fonts/korean/small.kowidth");
++static const u16 sKoFontNormalCopy1Glyphs[] = INCBIN_U16("graphics/fonts/korean/normal_copy_1.kofont");
++static const u8 sKoFontNormalCopy1Widths[] = INCBIN_U8("graphics/fonts/korean/normal_copy_1.kowidth");
++static const u16 sKoFontNormalGlyphs[] = INCBIN_U16("graphics/fonts/korean/normal.kofont");
++static const u8 sKoFontNormalWidths[] = INCBIN_U8("graphics/fonts/korean/normal.kowidth");
++static const u16 sKoFontMaleGlyphs[] = INCBIN_U16("graphics/fonts/korean/male.kofont");
++static const u8 sKoFontMaleWidths[] = INCBIN_U8("graphics/fonts/korean/male.kowidth");
++static const u16 sKoFontFemaleGlyphs[] = INCBIN_U16("graphics/fonts/korean/female.kofont");
++static const u8 sKoFontFemaleWidths[] = INCBIN_U8("graphics/fonts/korean/female.kowidth");
++
++#define KO_WIDTHS(base) ((const u8 *)GLYPHS((const u16 *)(base)))
++#define sFontSmallLatinGlyphs sKoFontSmallGlyphs
++#define sFontSmallLatinGlyphWidths KO_WIDTHS(sKoFontSmallWidths)
++#define sFontNormalCopy1LatinGlyphs sKoFontNormalCopy1Glyphs
++#define sFontNormalCopy1LatinGlyphWidths KO_WIDTHS(sKoFontNormalCopy1Widths)
++#define sFontNormalLatinGlyphs sKoFontNormalGlyphs
++#define sFontNormalLatinGlyphWidths KO_WIDTHS(sKoFontNormalWidths)
++#define sFontMaleLatinGlyphs sKoFontMaleGlyphs
++#define sFontMaleLatinGlyphWidths KO_WIDTHS(sKoFontMaleWidths)
++#define sFontFemaleLatinGlyphs sKoFontFemaleGlyphs
++#define sFontFemaleLatinGlyphWidths KO_WIDTHS(sKoFontFemaleWidths)
++#define SMALL_GLYPH_STRIDE 0x20
++#else
++#define SMALL_GLYPH_STRIDE 0x10
++#endif
++
+ u16 FontFunc_Small(struct TextPrinter *textPrinter)
+ {
+     struct TextPrinterSubStruct *subStruct = &textPrinter->subUnion.sub;
+@@ -830,6 +862,27 @@ u16 RenderText(struct TextPrinter *textPrinter)
+             return RENDER_FINISH;
+         }
+ 
++#ifdef KOREAN_TEXT
++        if (!textPrinter->japanese)
++        {
++            if (currChar < 0x100 && KO_IS_LEAD(currChar) && *textPrinter->printerTemplate.currentChar != EOS)
++            {
++                u8 trail = *textPrinter->printerTemplate.currentChar++;
++                if (Ko_IsJosa(currChar, trail))
++                {
++                    currChar = Ko_JosaGlyph(trail, textPrinter->koLastGlyph);
++                    if (currChar == 0)
++                        return RENDER_REPEAT; // a particle that draws nothing
++                }
++                else
++                {
++                    currChar = KO_GLYPH(currChar, trail);
++                }
++            }
++            textPrinter->koLastGlyph = currChar;
++        }
++#endif
++
+         switch (subStruct->glyphId)
+         {
+         case FONT_SMALL:
+@@ -1033,8 +1086,27 @@ s32 (*GetFontWidthFunc(u8 glyphId))(u16 _glyphId, bool32 _isJapanese)
+     return NULL;
+ }
+ 
++#ifdef KOREAN_TEXT
++// Width of the character at *pp (1 or 2 bytes, a particle against *prev);
++// advances *pp past it.
++static s32 KoGlyphWidthAt(s32 (*func)(u16, bool32), const u8 **pp, bool32 isJapanese, u16 *prev)
++{
++    u16 glyph;
++
++    if (isJapanese)
++        return func(*(*pp)++, isJapanese);
++    glyph = Ko_NextGlyph(pp, prev);
++    if (glyph == 0xFFFF)
++        return 0;
++    return func(glyph, FALSE);
++}
++#endif
++
+ s32 GetStringWidth(u8 fontId, const u8 *str, s16 letterSpacing)
+ {
++#ifdef KOREAN_TEXT
++    u16 koPrev = 0;
++#endif
+     bool8 isJapanese;
+     int minGlyphWidth;
+     s32 (*func)(u16 glyphId, bool32 isJapanese);
+@@ -1089,7 +1161,11 @@ s32 GetStringWidth(u8 fontId, const u8 *str, s16 letterSpacing)
+                 bufferPointer = DynamicPlaceholderTextUtil_GetPlaceholderPtr(*++str);
+             while (*bufferPointer != EOS)
+             {
++#ifdef KOREAN_TEXT
++                glyphWidth = KoGlyphWidthAt(func, &bufferPointer, isJapanese, &koPrev);
++#else
+                 glyphWidth = func(*bufferPointer++, isJapanese);
++#endif
+                 if (minGlyphWidth > 0)
+                     lineWidth += minGlyphWidth > glyphWidth ? minGlyphWidth : glyphWidth;
+                 else
+@@ -1171,7 +1247,15 @@ s32 GetStringWidth(u8 fontId, const u8 *str, s16 letterSpacing)
+             lineWidth += glyphWidth;
+             break;
+         default:
++#ifdef KOREAN_TEXT
++            {
++                const u8 *p = str;
++                glyphWidth = KoGlyphWidthAt(func, &p, isJapanese, &koPrev);
++                str = p - 1; // the loop steps past the last byte read
++            }
++#else
+             glyphWidth = func(*str, isJapanese);
++#endif
+             if (minGlyphWidth > 0)
+             {
+                 if (glyphWidth < minGlyphWidth)
+@@ -1393,7 +1477,7 @@ void DecompressGlyph_Small(u16 glyphId, bool32 isJapanese)
+     }
+     else
+     {
+-        glyphs = GLYPHS(sFontSmallLatinGlyphs) + (0x10 * glyphId);
++        glyphs = GLYPHS(sFontSmallLatinGlyphs) + (SMALL_GLYPH_STRIDE * glyphId);
+         DecompressGlyphTile(glyphs, (u16 *)gGlyphInfo.pixels);
+         DecompressGlyphTile(glyphs + 0x8, (u16 *)(gGlyphInfo.pixels + 0x40));
+         gGlyphInfo.width = sFontSmallLatinGlyphWidths[glyphId];
+diff --git a/src/text_printer.c b/src/text_printer.c
+index e425ccb..e665064 100644
+--- a/src/text_printer.c
++++ b/src/text_printer.c
+@@ -86,6 +86,9 @@ bool16 AddTextPrinter(struct TextPrinterTemplate *textSubPrinter, u8 speed, void
+     sTempTextPrinter.callback = callback;
+     sTempTextPrinter.minLetterSpacing = 0;
+     sTempTextPrinter.japanese = 0;
++#ifdef KOREAN_TEXT
++    sTempTextPrinter.koLastGlyph = 0;
++#endif
+ 
+     GenerateFontHalfRowLookupTable(textSubPrinter->fgColor, textSubPrinter->bgColor, textSubPrinter->shadowColor);
+     if (speed != TEXT_SKIP_DRAW && speed != 0)
+@@ -120,7 +123,22 @@ void RunTextPrinters(void)
+     {
+         if (sTextPrinters[i].active)
+         {
+-            u16 renderCmd = RenderFont(&sTextPrinters[i]);
++            u16 renderCmd;
++#ifdef PORT_BRIDGE
++            /* The colour table is global: a window printed instantly while
++             * this printer was mid-line (the move menu opened over the
++             * battle prompt) left its colours in it. Each printer draws in
++             * its own. */
++            {
++                u8 fg, bg, shadow;
++                struct TextPrinterTemplate *t = &sTextPrinters[i].printerTemplate;
++
++                SaveTextColors(&fg, &bg, &shadow);
++                if (fg != t->fgColor || bg != t->bgColor || shadow != t->shadowColor)
++                    GenerateFontHalfRowLookupTable(t->fgColor, t->bgColor, t->shadowColor);
++            }
++#endif
++            renderCmd = RenderFont(&sTextPrinters[i]);
+             switch (renderCmd)
+             {
+             case RENDER_PRINT:
+diff --git a/tools/preproc/asm_file.cpp b/tools/preproc/asm_file.cpp
+index e649c2c..c69d82f 100644
+--- a/tools/preproc/asm_file.cpp
++++ b/tools/preproc/asm_file.cpp
+@@ -34,6 +34,17 @@ AsmFile::AsmFile(std::string filename, bool isStdin, bool doEnum) : m_filename(f
+     m_buffer = ReadFileToBuffer(filename.c_str(), isStdin, &m_size);
+     m_doEnum = doEnum;
+ 
++    // Windows cpp emits CRLF; the enum parser only knows '\n'.
++    {
++        long w = 0;
++        for (long r = 0; r < m_size; r++)
++            if (m_buffer[r] != '\r')
++                m_buffer[w++] = m_buffer[r];
++        for (long r = w; r < m_size; r++)
++            m_buffer[r] = 0;
++        m_size = w;
++    }
++
+     m_pos = 0;
+     m_lineNum = 1;
+     m_lineStart = 0;

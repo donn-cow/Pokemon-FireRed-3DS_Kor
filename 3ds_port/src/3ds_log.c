@@ -1,3 +1,4 @@
+#include "3ds_paths.h"
 #include <3ds.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -192,7 +193,7 @@ void CtrLog_Init(void)
     setvbuf(stdout, NULL, _IONBF, 0);
     setvbuf(stderr, NULL, _IONBF, 0);
     mkdir("sdmc:/3ds", 0777);
-    mkdir("sdmc:/3ds/firered3ds", 0777);
+    mkdir(CTR_SD_DIR, 0777);
     LightLock_Init(&sLock);
     LightLock_Init(&sDrainLock);
     LightLock_Init(&sConsoleLock);
@@ -205,14 +206,14 @@ void CtrLog_Init(void)
      * pay for SD writes; to diagnose, create that file (any content). */
     sFile = NULL;
     {
-        FILE *marker = fopen("sdmc:/3ds/firered3ds/debug.txt", "r");
+        FILE *marker = fopen(CTR_SD_ROOT "debug.txt", "r");
 
         if (marker != NULL)
         {
             fclose(marker);
-            remove("sdmc:/3ds/firered3ds/port-prev.log");
-            rename("sdmc:/3ds/firered3ds/port.log", "sdmc:/3ds/firered3ds/port-prev.log");
-            sFile = fopen("sdmc:/3ds/firered3ds/port.log", "w");
+            remove(CTR_SD_ROOT "port-prev.log");
+            rename(CTR_SD_ROOT "port.log", CTR_SD_ROOT "port-prev.log");
+            sFile = fopen(CTR_SD_ROOT "port.log", "w");
         }
     }
     if (sFile)

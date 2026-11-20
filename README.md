@@ -2,6 +2,66 @@
   <img src="3ds_port/assets/artwork/FireRed%203DS.png" alt="FireRed 3DS" width="560">
 </p>
 
+> **한국어판 포크입니다.** 이 저장소는
+> [NachoGonzalez2001/Pokemon-FireRed-3DS](https://github.com/NachoGonzalez2001/Pokemon-FireRed-3DS)를
+> 포크해서 **포켓몬스터 파이어레드 한글판(K260613)** 롬으로 실행할 수 있게 한 비공식 버전입니다.
+> 원본 프로젝트와 별개로 관리되며, 원본 제작자에게 이 포크에 관한 문의를 하지 말아 주세요.
+
+## 한국어판 (FireRed3DS-KO)
+
+- 한글 대사·메뉴·전투, 한글판 롬의 글꼴(기본·남자·여자 대사 글꼴)과 조사 처리
+- 아래 화면 메뉴의 한국어화
+- 한글판에서 바뀐 그래픽(타이틀 로고 등) 반영
+- 간이회화 가나다(자음) 모드, 트레이너 타워 한글 데이터
+- 포트가 새로 넣은 문장(파티 경험치, 메가진화 이름·특성·메시지)의 한국어 번역
+- 실행 파일, 세이브, 설정, 데이터가 모두 SD 카드의 `/3ds/firered3ds-ko/` 한 폴더에 있어서 영어판과 섞이지 않습니다.
+- 홈 메뉴용 CIA 포워더(영어판 포워더와 함께 설치 가능)
+
+**이 저장소와 배포 파일에는 게임도, 한글판의 번역문이나 그래픽도 들어 있지 않습니다.**
+빌더가 사용자의 한글판 롬에서 직접 만듭니다. 저장소에는 각 문자열과 그래픽이
+한글판 롬의 어디에 있는지(주소)만 들어 있습니다.
+
+### 준비물
+
+- 커스텀 펌웨어(Luma3DS)와 홈브류 런처가 설치된 3DS / 2DS 계열 기기
+- 포켓몬스터 파이어레드 한글판 롬 (K260613), SHA-1 `a79a61464f6b79d830af784969324945c5b73340`
+  (일본판 롬에 한글 패치 `20260613 포켓몬스터 파이어레드(J-K).xdelta`를 적용한 롬)
+
+### 설치
+
+1. [Releases](../../releases)에서 `FireRed3DS-KO-v…-Windows.zip`을 받아 압축을 풉니다.
+2. `FireRed3DS-Builder.exe`를 실행하고 한글판 롬과 SD 카드를 고른 뒤 **설치**를 누릅니다.
+3. 홈브류 런처에서 "Pokemon FireRed 3DS KO"를 실행합니다.
+   홈 메뉴에서 실행하려면 `FireRed3DS-KO-Forwarder.cia`를 FBI 등으로 설치합니다.
+
+원본의 웹 빌더는 미국판 전용이라 한국어판에는 쓸 수 없습니다.
+
+### 빌드 (개발자)
+
+```sh
+python tools/bootstrap.py                                   # 디컴프 + patches/ (0031: 한글 엔진)
+python tools/korean/prepare.py --rom "Pokemon FireRed (K260613).gba"   # 한글판 롬에서 문자열·그래픽·글꼴
+make -C build/upstream tools generated
+make -C build/upstream/3ds_port KOREAN=1 all                # 개발용(데이터 포함, 배포 금지)
+make -C build/upstream/3ds_port KOREAN=1 release            # 실행 파일만
+python tools/build_release.py --version 0.5.2-ko --rom "Pokemon FireRed (K260613).gba" --tree build/upstream
+```
+
+| 경로 | 내용 |
+|---|---|
+| `patches/pokefirered/0031-korean-text-engine.patch` | 디컴프 쪽 한글 엔진(`KOREAN_TEXT`) |
+| `tools/korean/` | 한글판 롬에서 데이터를 읽어 트리에 넣는 도구와 주소 목록 |
+| `3ds_port/src/fr_korean_ui.h` | 아래 화면 메뉴 번역 |
+| `3ds_port/include/3ds_paths.h` | SD 카드 폴더(`KOREAN=1`이면 `firered3ds-ko`) |
+
+### 크레딧 (한국어판)
+
+- 원본 포트: [NachoGonzalez2001](https://github.com/NachoGonzalez2001) — Pokémon FireRed 3DS
+- 한글 번역·그래픽·글꼴: 포켓몬스터 파이어레드 한글 패치(20260613) 제작자분들. 이 저장소에는 포함되어 있지 않고 사용자의 롬에서만 읽습니다.
+- 한국어판 포팅: [donn-cow](https://github.com/donn-cow)
+
+---
+
 # Pokémon FireRed 3DS (voxel)
 
 A native Nintendo 3DS port of Pokémon FireRed that uses both screens, with an

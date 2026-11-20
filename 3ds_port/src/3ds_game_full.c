@@ -16,8 +16,10 @@
  */
 
 /* Before the game's headers, whose global.h defines abs and friends. */
+#include "3ds_paths.h"
 #include <setjmp.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include "global.h"
 #include "main.h"
@@ -176,7 +178,9 @@ static void WaitForResetKeysUp(void)
         if (!CtrPlatform_BeginFrame())
         {
             CtrPlatform_Shutdown();
-            exit(0);
+            /* everything is shut down: skip newlib's stdio cleanup, whose fclose of a
+               file on an unmounted device faulted on exit */
+            _exit(0);
         }
     }
 }
@@ -390,7 +394,7 @@ void CtrGame_VBlank(void)
         FILE *file;
         const u16 *regs = (const u16 *)REG_BASE;
 
-        snprintf(name, sizeof(name), "sdmc:/3ds/firered3ds/frame_%04lu.raw", (unsigned long)sFrames);
+        snprintf(name, sizeof(name), CTR_SD_ROOT "frame_%04lu.raw", (unsigned long)sFrames);
         file = fopen(name, "wb");
 
         if (file)
@@ -404,12 +408,12 @@ void CtrGame_VBlank(void)
             /* the bottom screen's canvas beside it (fr_bottom_ui.c) */
             extern void CtrBottom_Dump(const char *path);
 
-            snprintf(name, sizeof(name), "sdmc:/3ds/firered3ds/bottom_%04lu.raw", (unsigned long)sFrames);
+            snprintf(name, sizeof(name), CTR_SD_ROOT "bottom_%04lu.raw", (unsigned long)sFrames);
             CtrBottom_Dump(name);
 #if CTR_VOXEL_ENABLED
             if (gPortUiPixels != NULL)
             {
-                snprintf(name, sizeof(name), "sdmc:/3ds/firered3ds/ui_%04lu.raw", (unsigned long)sFrames);
+                snprintf(name, sizeof(name), CTR_SD_ROOT "ui_%04lu.raw", (unsigned long)sFrames);
                 file = fopen(name, "wb");
                 if (file)
                 {
@@ -573,7 +577,7 @@ static void DebugWarp(void)
  * announced anyway after a while. tour_start.txt, when present, is the stop
  * to begin from.
  */
-#define TOUR_DIR "sdmc:/3ds/firered3ds/"
+#define TOUR_DIR CTR_SD_ROOT
 /* The overworld's 3D status (ctr_voxel.c): "on" once it draws the map; a
  * heavy map shows the 2D picture while it loads. */
 extern const char *CtrVoxel_Status(void);
@@ -1049,7 +1053,9 @@ void CtrGame_WaitFrame(void)
     if (!CtrPlatform_BeginFrame())
     {
         CtrPlatform_Shutdown();
-        exit(0);
+        /* everything is shut down: skip newlib's stdio cleanup, whose fclose of a
+           file on an unmounted device faulted on exit */
+        _exit(0);
     }
     CRUMB(0x202);
     CtrPlatform_Diagnostic(sFrames, 0, 0);

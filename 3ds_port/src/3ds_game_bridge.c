@@ -1,3 +1,4 @@
+#include "3ds_paths.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -87,7 +88,7 @@ static u16 ScriptButton(const char *name)
 
 static void LoadInputScript(void)
 {
-    FILE *file = fopen("sdmc:/3ds/firered3ds/keys.txt", "r");
+    FILE *file = fopen(CTR_SD_ROOT "keys.txt", "r");
     char line[128];
 
     sScriptLoaded = true;

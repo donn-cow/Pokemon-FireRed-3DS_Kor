@@ -572,9 +572,13 @@ static int CompareWarmEntries(const void *a, const void *b)
     return x->idx < y->idx ? -1 : x->idx > y->idx;
 }
 
+/* Set at shutdown: the worker stops before the file system closes under it. */
+static volatile bool sWarmStop;
+static volatile bool sWarmBusy;
+
 static bool WarmRoom(void)
 {
-    return sStats.bytes < sBudget / WARM_BUDGET_SHARE;
+    return !sWarmStop && sStats.bytes < sBudget / WARM_BUDGET_SHARE;
 }
 
 /* Claims the payloads [first, end) of the list that nobody holds yet. */
@@ -690,7 +694,7 @@ static void WarmWorker(void *arg)
     u8 *run = NULL;
     u64 begin = CtrPlatform_Ticks();
 
-    for (u32 idx = 0; idx < sEntryCount; ++idx)
+    for (u32 idx = 0; idx < sEntryCount && !sWarmStop; ++idx)
         if (CtrData_Locate(GetAssetPathByIndex(idx), &list[count].offset, &list[count].size)
             && list[count].size == sEntries[idx].size)
         {
@@ -714,6 +718,7 @@ static void WarmWorker(void *arg)
     }
     free(run);
     free(list);
+    sWarmBusy = false;
     CtrLog_Write(CTR_LOG_FS, "assets warmed: %lu KiB of %lu payloads in %.0f ms (%s)",
                  (unsigned long)(sStats.bytes >> 10), (unsigned long)sStats.loads,
                  CtrPlatform_TickMs(CtrPlatform_Ticks() - begin), count ? "pack runs" : "file by file");
@@ -735,11 +740,21 @@ void CtrAssets_StartWarmup(void)
          * 3DS), the field asking for its tiles in the frame meanwhile. It
          * waits on the FS service far more than it computes.
          */
-        || !CtrPlatform_StartThread(WarmWorker, list, 16 * 1024, 1))
+        || (sWarmBusy = true, !CtrPlatform_StartThread(WarmWorker, list, 16 * 1024, 1)))
     {
+        sWarmBusy = false;
         free(list);
         CtrLog_Write(CTR_LOG_ERROR, "assets: no warm-up worker; payloads load on demand");
     }
+}
+
+/* Shutdown: ask the warm-up worker to stop and wait for it (at most 2 s), so
+   it is not reading a file when the file system closes. */
+void CtrAssets_StopWarmup(void)
+{
+    sWarmStop = true;
+    for (int i = 0; i < 2000 && sWarmBusy; ++i)
+        svcSleepThread(1000000LL);
 }
 
 void CtrAssets_SetBudget(u32 bytes)

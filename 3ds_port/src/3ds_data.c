@@ -5,6 +5,7 @@
  */
 
 #define _GNU_SOURCE
+#include "3ds_paths.h"
 #include <3ds.h>
 #include <errno.h>
 #include <stdio.h>
@@ -26,12 +27,23 @@
 
 /* The ROM the data pack must come from: Pokemon FireRed (USA) rev 1, the
  * one the port is built from (upstream.lock). */
+#ifdef CTR_SD_KO
+/* The Korean build: the Korean ROM (K260613, the Japanese ROM with the
+ * 20260613 Korean patch). */
+static const uint8_t sSupportedRomSha1[20] = {
+    0xa7, 0x9a, 0x61, 0x46, 0x4f, 0x6b, 0x79, 0xd8, 0x30, 0xaf,
+    0x78, 0x49, 0x69, 0x32, 0x49, 0x45, 0xc5, 0xb7, 0x33, 0x40,
+};
+#define SUPPORTED_ROM_DETAIL "Only Pokemon FireRed Korean (K260613)\n" \
+                             "is supported. Run the builder with it."
+#else
 static const uint8_t sSupportedRomSha1[20] = {
     0xdd, 0x59, 0x45, 0xdb, 0x9b, 0x93, 0x07, 0x50, 0xcb, 0x39,
     0xd0, 0x0c, 0x84, 0xda, 0x85, 0x71, 0xfe, 0xeb, 0xf4, 0x17,
 };
 #define SUPPORTED_ROM_DETAIL "Only Pokemon FireRed (USA, Rev 1) is\n" \
                              "supported. Run the builder with that ROM."
+#endif
 
 typedef struct
 {
@@ -97,7 +109,7 @@ static bool OpenPak(void)
                  "Run the builder that came with this\n"
                  "release with your own Pokemon FireRed\n"
                  "ROM and install the data pack to:\n\n"
-                 "  /3ds/firered3ds/firered3ds.pak");
+                 "  " CTR_SD_SHOWN "firered3ds.pak");
         return false;
     }
     setvbuf(sPak, NULL, _IOFBF, 64 * 1024);
@@ -109,7 +121,7 @@ static bool OpenPak(void)
         break;
     case CTR_PAK_BAD_MAGIC:
         SetError("This is not a game data pack.",
-                 "/3ds/firered3ds/firered3ds.pak is not a\n"
+                 "" CTR_SD_SHOWN "firered3ds.pak is not a\n"
                  "data pack. Run the builder again.");
         goto fail;
     case CTR_PAK_BAD_SCHEMA:
@@ -171,7 +183,7 @@ bool CtrData_Init(void)
 
     ReadEngineAbi();
     mkdir("sdmc:/3ds", 0777);
-    mkdir("sdmc:/3ds/firered3ds", 0777);
+    mkdir(CTR_SD_DIR, 0777);
     if (choice == 0)
     {
         if (FileExists(CTR_DATA_LOOSE_MARKER))

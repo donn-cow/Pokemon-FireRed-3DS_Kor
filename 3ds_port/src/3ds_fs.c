@@ -1,3 +1,4 @@
+#include "3ds_paths.h"
 #include <3ds.h>
 #include <errno.h>
 #include <stdio.h>
@@ -118,7 +119,7 @@ void CtrFs_MigrateLegacy(void)
     static const char *const sFiles[] = { "settings.txt", "debug.txt" };
 
     mkdir("sdmc:/3ds", 0777);
-    mkdir("sdmc:/3ds/firered3ds", 0777);
+    mkdir(CTR_SD_DIR, 0777);
     if (Exists(CTR_DATA_DIR "firered3ds.sav") || !IsFireRedSave(LEGACY_DIR "emerald3ds.sav"))
         return;
     if (!CopyFile(LEGACY_DIR "emerald3ds.sav", CTR_DATA_DIR "firered3ds.sav"))
@@ -150,7 +151,7 @@ bool CtrFs_Init(void)
         return false;
     }
     mkdir("sdmc:/3ds", 0777);
-    mkdir("sdmc:/3ds/firered3ds", 0777);
+    mkdir(CTR_SD_DIR, 0777);
     FILE *file = CtrFs_OpenAsset("boot.txt");
     char contents[64] = {0};
     bool valid = file && fgets(contents, sizeof(contents), file)
@@ -163,6 +164,11 @@ bool CtrFs_Init(void)
 
 void CtrFs_Shutdown(void)
 {
+    /* exit() closes every FILE still open; one on the RomFS would then look
+       for a device that romfsExit already removed and fault. Close them all
+       while the devices still exist. */
+    fflush(NULL);
+    _fcloseall_r(_REENT);
     if (sMounted)
         romfsExit();
     sMounted = false;
@@ -180,5 +186,5 @@ FILE *CtrFs_OpenAsset(const char *relativePath)
 
 FILE *CtrFs_OpenData(const char *relativePath, const char *mode)
 {
-    return Open("sdmc:/3ds/firered3ds/", relativePath, mode);
+    return Open(CTR_SD_ROOT, relativePath, mode);
 }

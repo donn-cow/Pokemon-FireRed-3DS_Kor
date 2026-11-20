@@ -40,7 +40,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
 APP = "FireRed3DS"
-CIA_NAME = APP + "-Forwarder.cia"
+EDITION = APP + "-KO"  # the Korean edition: its own release names, same files on the SD card
+CIA_NAME = EDITION + "-Forwarder.cia"
 GENERATORS = ["fr_gen_relief.py", "fr_gen_trees.py", "fr_export_buildings.py"]
 VOXELGEN_FILES = ["src/voxel/voxel_props_table.h"]
 
@@ -97,7 +98,7 @@ def main() -> None:
 
     port = args.tree / "3ds_port"
     tag = "v" + args.version
-    release = DIST / ("%s-%s-Windows" % (APP, tag))
+    release = DIST / ("%s-%s-Windows" % (EDITION, tag))
     payload = release / "payload"
     for name in (APP + ".3dsx", APP + ".smdh"):
         if not (port / "dist" / name).exists():
@@ -145,7 +146,7 @@ def main() -> None:
     shutil.copy2(ROOT / "NOTICE.md", licenses / "NOTICE.md")
     shutil.copy2(ROOT / "3ds_port/src/voxel/NOTICE.md", licenses / "voxel-NOTICE.md")
 
-    archive = DIST / ("%s-%s-Windows.zip" % (APP, tag))
+    archive = DIST / ("%s-%s-Windows.zip" % (EDITION, tag))
     if archive.exists():
         archive.unlink()
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as zf:

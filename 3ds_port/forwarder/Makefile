@@ -24,12 +24,12 @@ MAKEROM ?= $(firstword $(wildcard $(TOOLS_BIN)/makerom$(EXE)) makerom)
 BANNERTOOL ?= $(firstword $(wildcard $(TOOLS_BIN)/bannertool$(EXE)) bannertool)
 
 ART := ../assets/artwork
-APP_TITLE := Pokemon FireRed 3DS
-APP_SHORT := FireRed 3DS
+APP_TITLE := Pokemon FireRed 3DS KO
+APP_SHORT := FireRed 3DS KO
 APP_AUTHOR := pokefirered-3ds
 # Shown by FBI and the HOME Menu; bump with the forwarder, not with the game.
 APP_VERSION ?= 1.0.1
-CIA := dist/FireRed3DS-Forwarder.cia
+CIA := dist/FireRed3DS-KO-Forwarder.cia
 
 all: $(CIA)
 

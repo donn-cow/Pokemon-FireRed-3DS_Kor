@@ -1,12 +1,12 @@
 # makerom spec of the HOME Menu forwarder (see Makefile).
 BasicInfo:
-  Title                   : "FireRed3DS"
-  ProductCode             : "CTR-H-FR3D"
+  Title                   : "FireRed3DSKO"
+  ProductCode             : "CTR-H-FR3K"
   Logo                    : Homebrew
 
 TitleInfo:
   Category                : Application
-  UniqueId                : 0xF4ED3
+  UniqueId                : 0xF4ED4
 
 Option:
   UseOnSD                 : true

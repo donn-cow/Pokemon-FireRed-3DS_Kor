@@ -13,3 +13,5 @@ __pycache__/
 3ds_port/assets/artwork/logo.png
 # release outputs (tools/build_release.py)
 /dist/
+*.GBA
+*.xdelta

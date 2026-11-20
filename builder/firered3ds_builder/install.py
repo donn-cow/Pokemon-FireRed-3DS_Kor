@@ -10,7 +10,7 @@ from pathlib import Path
 
 from .errors import BuilderError
 
-APP_DIR = Path("3ds") / "firered3ds"
+APP_DIR = Path("3ds") / "firered3ds-ko"   # 한글판: 실행 파일, 세이브, 데이터 팩이 모두 이 폴더
 
 
 def find_sd_cards() -> list[Path]:
