@@ -25,7 +25,7 @@
 
 - 커스텀 펌웨어(Luma3DS)와 홈브류 런처가 설치된 3DS / 2DS 계열 기기
 - 포켓몬스터 파이어레드 한글판 롬 (K260613), SHA-1 `a79a61464f6b79d830af784969324945c5b73340`
-  (일본판 롬에 한글 패치 `20260613 포켓몬스터 파이어레드(J-K).xdelta`를 적용한 롬)
+  (일본판 롬에 [한글 패치](https://blog.naver.com/johyunjun58/222630443363) `20260613 포켓몬스터 파이어레드(J-K).xdelta`를 적용한 롬)
 
 ### 설치
 
@@ -57,7 +57,7 @@ python tools/build_release.py --version 0.5.2-ko --rom "Pokemon FireRed (K260613
 ### 크레딧 (한국어판)
 
 - 원본 포트: [NachoGonzalez2001](https://github.com/NachoGonzalez2001) — Pokémon FireRed 3DS
-- 한글 번역·그래픽·글꼴: 포켓몬스터 파이어레드 한글 패치(20260613) 제작자분들. 이 저장소에는 포함되어 있지 않고 사용자의 롬에서만 읽습니다.
+- 한글 번역·그래픽·글꼴: [포켓몬스터 파이어레드 한글 패치](https://blog.naver.com/johyunjun58/222630443363)(20260613) 제작자분들. 이 저장소에는 포함되어 있지 않고 사용자의 롬에서만 읽습니다.
 - 한국어판 포팅: [donn-cow](https://github.com/donn-cow)
 
 ---
