@@ -5,6 +5,8 @@
 > **한국어판 포크입니다.** 이 저장소는
 > [NachoGonzalez2001/Pokemon-FireRed-3DS](https://github.com/NachoGonzalez2001/Pokemon-FireRed-3DS)를
 > 포크해서 **포켓몬스터 파이어레드 한글판(K260613)** 롬으로 실행할 수 있게 한 비공식 버전입니다.
+> 한글 번역·그래픽·글꼴은 [포켓몬스터 파이어레드 한글 패치](https://blog.naver.com/johyunjun58/222630443363)
+> 제작자분들의 것이며, 이 저장소에는 들어 있지 않습니다.
 > 원본 프로젝트와 별개로 관리되며, 원본 제작자에게 이 포크에 관한 문의를 하지 말아 주세요.
 
 ## 한국어판 (FireRed3DS-KO)
